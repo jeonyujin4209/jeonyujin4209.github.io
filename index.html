@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Security Cafe 3D - Jeon Yujin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            /* iOS Safari 노치/홈바 대응 */
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            touch-action: none; /* 터치 스크롤 방지 */
+        }
+
+        /* UI 오버레이 */
+        .ui-overlay {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 20px;
+            border-radius: 10px;
+            border: 3px solid #333;
+            font-size: 0.9rem;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .ui-overlay div {
+            margin: 5px 0;
+        }
+
+        /* 상호작용 프롬프트 */
+        #interaction-ui {
+            position: fixed;
+            bottom: 30%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 25px;
+            border-radius: 15px;
+            border: 4px solid #4CAF50;
+            font-size: 1.1rem;
+            font-weight: bold;
+            display: none;
+            z-index: 100;
+            animation: bounce 0.5s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-10px); }
+        }
+
+        /* 다이얼로그 */
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .dialog-overlay.active {
+            display: flex;
+        }
+
+        .dialog-box {
+            background: white;
+            border-radius: 20px;
+            border: 6px solid #8b4513;
+            width: 90%;
+            max-width: 700px;
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 30px;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .dialog-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .dialog-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #4a2511;
+            margin-bottom: 15px;
+        }
+
+        .dialog-content {
+            color: #333;
+            line-height: 1.8;
+            font-size: 1rem;
+        }
+
+        /* CMD 창 스타일 */
+        .cmd-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .cmd-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .cmd-window {
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+            border: 2px solid #2a2a2a;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 1000px;
+            height: 85vh;
+            max-height: 750px;
+            box-shadow:
+                0 25px 100px rgba(0, 0, 0, 0.9),
+                0 0 80px rgba(22, 198, 12, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            font-family: 'Consolas', 'Courier New', monospace;
+            transform: scale(0.85) translateY(30px);
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cmd-window::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(circle at 20% 50%, rgba(22, 198, 12, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(22, 198, 12, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .cmd-overlay.active .cmd-window {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+
+        .cmd-header {
+            background: linear-gradient(to bottom, #252525 0%, #1a1a1a 100%);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #2a2a2a;
+            border-radius: 12px 12px 0 0;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .cmd-title {
+            color: #16c60c;
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-shadow: 0 0 10px rgba(22, 198, 12, 0.5);
+            letter-spacing: 0.5px;
+        }
+
+        .cmd-icon {
+            font-size: 18px;
+            filter: drop-shadow(0 0 5px rgba(22, 198, 12, 0.3));
+        }
+
+        .cmd-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .cmd-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cmd-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.4s, height 0.4s;
+        }
+
+        .cmd-btn:hover::before {
+            width: 100px;
+            height: 100px;
+        }
+
+        .cmd-btn.minimize {
+            background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
+            color: #fff;
+        }
+
+        .cmd-btn.maximize {
+            background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
+            color: #fff;
+        }
+
+        .cmd-btn.close {
+            background: linear-gradient(135deg, #ff1744, #d01020);
+            color: #fff;
+        }
+
+        .cmd-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .cmd-btn.close:hover {
+            box-shadow: 0 5px 20px rgba(255, 23, 68, 0.4);
+        }
+
+        .cmd-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cmd-menu {
+            background: linear-gradient(to bottom, #151515, #0a0a0a);
+            width: 240px;
+            padding: 25px 20px;
+            border-right: 2px solid #2a2a2a;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 5px 0 20px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .cmd-menu::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(to bottom,
+                transparent 0%,
+                rgba(22, 198, 12, 0.3) 50%,
+                transparent 100%);
+        }
+
+        .cmd-menu-btn {
+            background: transparent;
+            border: 2px solid transparent;
+            color: #16c60c;
+            padding: 14px 18px;
+            text-align: left;
+            cursor: pointer;
+            font-family: 'Consolas', monospace;
+            font-size: 15px;
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+            font-weight: 600;
+        }
+
+        .cmd-menu-btn::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(22, 198, 12, 0.15), transparent);
+            transition: width 0.3s ease;
+        }
+
+        .cmd-menu-btn:hover::before {
+            width: 100%;
+        }
+
+        .cmd-prompt {
+            color: #16c60c;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .cmd-menu-btn:hover {
+            background: rgba(22, 198, 12, 0.08);
+            border-color: rgba(22, 198, 12, 0.3);
+            transform: translateX(5px);
+            text-shadow: 0 0 10px rgba(22, 198, 12, 0.3);
+        }
+
+        .cmd-menu-btn.active {
+            background: linear-gradient(135deg, #16c60c, #12a009);
+            color: #0c0c0c;
+            border-color: #16c60c;
+            font-weight: bold;
+            box-shadow:
+                0 5px 15px rgba(22, 198, 12, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transform: translateX(8px) scale(1.02);
+        }
+
+        .cmd-menu-btn.active .cmd-prompt {
+            color: #0c0c0c;
+        }
+
+        .cmd-menu-btn.active::before {
+            width: 0;
+        }
+
+        .cmd-content {
+            flex: 1;
+            padding: 35px 40px;
+            overflow-y: auto;
+            color: #d4d4d4;
+            font-size: 14px;
+            line-height: 1.8;
+            background: #0d0d0d;
+        }
+
+        .cmd-content::-webkit-scrollbar {
+            width: 14px;
+        }
+
+        .cmd-content::-webkit-scrollbar-track {
+            background: #0a0a0a;
+            border-left: 1px solid #1a1a1a;
+        }
+
+        .cmd-content::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, #3a3a3a, #2a2a2a);
+            border-radius: 8px;
+            border: 2px solid #0a0a0a;
+        }
+
+        .cmd-content::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, #4a4a4a, #3a3a3a);
+        }
+
+        .cmd-loading {
+            color: #16c60c;
+            font-size: 18px;
+            text-shadow: 0 0 10px rgba(22, 198, 12, 0.5);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .cmd-cursor {
+            animation: blink 0.8s infinite;
+            color: #16c60c;
+            text-shadow: 0 0 10px rgba(22, 198, 12, 0.8);
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                text-shadow: 0 0 10px rgba(22, 198, 12, 0.5);
+            }
+            50% {
+                opacity: 0.7;
+                text-shadow: 0 0 20px rgba(22, 198, 12, 0.8);
+            }
+        }
+
+        .cmd-section {
+            margin-bottom: 30px;
+        }
+
+        .cmd-section-title {
+            color: #16c60c;
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #2a2a2a;
+            padding-bottom: 12px;
+            text-shadow: 0 0 15px rgba(22, 198, 12, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .cmd-item {
+            background: linear-gradient(135deg, #1a1a1a, #141414);
+            border: 1px solid #2a2a2a;
+            border-left: 4px solid #16c60c;
+            padding: 20px 24px;
+            margin-bottom: 18px;
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cmd-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg,
+                rgba(22, 198, 12, 0.1),
+                transparent);
+            transition: width 0.3s ease;
+        }
+
+        .cmd-item:hover {
+            border-left-color: #1edc18;
+            border-left-width: 6px;
+            background: linear-gradient(135deg, #1f1f1f, #181818);
+            transform: translateX(5px);
+            box-shadow:
+                0 8px 24px rgba(0, 0, 0, 0.4),
+                -6px 0 20px rgba(22, 198, 12, 0.15);
+        }
+
+        .cmd-item:hover::before {
+            width: 100%;
+        }
+
+        .cmd-item-title {
+            color: #fff;
+            font-size: 17px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+            letter-spacing: 0.3px;
+        }
+
+        .cmd-item-date {
+            color: #999;
+            font-size: 13px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .cmd-item-desc {
+            color: #d4d4d4;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .cmd-highlight {
+            color: #16c60c;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(22, 198, 12, 0.4);
+        }
+
+        /* 모바일 반응형 */
+        @media (max-width: 768px) {
+            .ui-overlay {
+                top: 10px;
+                left: 10px;
+                padding: 10px 12px;
+                font-size: 0.75rem;
+                border-radius: 8px;
+                border-width: 2px;
+                max-width: 180px;
+            }
+
+            .ui-overlay div {
+                margin: 3px 0;
+            }
+
+            /* PC 조작법 숨기기 */
+            .ui-overlay .desktop-only {
+                display: none;
+            }
+
+            /* 모바일 조작법 보이기 */
+            .ui-overlay .mobile-only {
+                display: block;
+            }
+
+            #interaction-ui {
+                bottom: 20%;
+                padding: 10px 18px;
+                font-size: 0.95rem;
+                border-width: 3px;
+            }
+
+            .dialog-box {
+                width: 95%;
+                padding: 20px;
+                border-width: 4px;
+            }
+
+            .dialog-title {
+                font-size: 1.4rem;
+            }
+
+            .dialog-content {
+                font-size: 0.9rem;
+            }
+
+            .dialog-close {
+                width: 35px;
+                height: 35px;
+                font-size: 1.2rem;
+            }
+
+            /* CMD 창 모바일 */
+            .cmd-window {
+                width: 95%;
+                height: 90vh;
+                max-height: none;
+                border-radius: 8px;
+            }
+
+            .cmd-header {
+                padding: 10px 15px;
+            }
+
+            .cmd-title {
+                font-size: 12px;
+            }
+
+            .cmd-title span:last-child {
+                display: none; /* 경로 숨기기 */
+            }
+
+            .cmd-btn {
+                width: 26px;
+                height: 26px;
+                font-size: 12px;
+            }
+
+            .cmd-body {
+                flex-direction: column;
+            }
+
+            .cmd-menu {
+                width: 100%;
+                flex-direction: row;
+                padding: 10px;
+                border-right: none;
+                border-bottom: 2px solid #2a2a2a;
+                justify-content: center;
+            }
+
+            .cmd-menu-btn {
+                padding: 8px 12px;
+                font-size: 11px;
+                flex: 1;
+                text-align: center;
+            }
+
+            .cmd-menu-btn .cmd-prompt {
+                display: none;
+            }
+
+            .cmd-content {
+                padding: 15px;
+                font-size: 12px;
+                flex: 1;
+                overflow-y: auto;
+            }
+
+            .cmd-section-title {
+                font-size: 16px;
+                margin-bottom: 15px;
+            }
+
+            .cmd-item {
+                padding: 12px 10px;
+                margin-bottom: 12px;
+            }
+
+            .cmd-item-title {
+                font-size: 14px;
+            }
+
+            .cmd-item-date {
+                font-size: 11px;
+            }
+
+            .cmd-item-desc {
+                font-size: 12px;
+            }
+        }
+
+        /* 모바일에서 조작법 UI 숨기기 */
+        @media (max-width: 768px) {
+            .ui-overlay {
+                display: none;
+            }
+        }
+
+        /* 하단 버튼 영역 */
+        .bottom-buttons {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .bottom-text {
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px 20px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .bottom-text.visible {
+            opacity: 1;
+        }
+
+        .bottom-btn-group {
+            display: flex;
+            gap: 15px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .bottom-btn-group.visible {
+            opacity: 1;
+        }
+
+        .bottom-btn {
+            padding: 12px 28px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .bottom-btn.profile {
+            background: linear-gradient(135deg, #16c60c, #12a009);
+            color: #fff;
+        }
+
+        .bottom-btn.profile:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(22, 198, 12, 0.4);
+        }
+
+        .bottom-btn.blog {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+        }
+
+        .bottom-btn.blog:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .bottom-btn.play {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+            color: #fff;
+        }
+
+        .bottom-btn.play:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        /* 놀기 서브메뉴 */
+        .play-submenu {
+            display: none;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            max-width: 320px;
+        }
+
+        .play-submenu.visible {
+            display: flex;
+        }
+
+        .play-submenu .bottom-btn {
+            padding: 10px 16px;
+            font-size: 0.85rem;
+        }
+
+        .bottom-btn.back {
+            background: linear-gradient(135deg, #666, #444);
+            color: #fff;
+        }
+
+        .bottom-btn.exercise {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: #fff;
+        }
+
+        .bottom-btn.game {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: #fff;
+        }
+
+        .bottom-btn.piano {
+            background: linear-gradient(135deg, #1abc9c, #16a085);
+            color: #fff;
+        }
+
+        .bottom-btn.hacking {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: #fff;
+        }
+
+        .bottom-btn.rest {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: #fff;
+        }
+
+        /* 모바일 하단 버튼 */
+        @media (max-width: 768px) {
+            .bottom-buttons {
+                bottom: 20px;
+                gap: 8px;
+            }
+
+            .bottom-text {
+                font-size: 0.95rem;
+                padding: 6px 16px;
+            }
+
+            .bottom-btn-group {
+                gap: 10px;
+            }
+
+            .bottom-btn {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <!-- UI (PC만 표시) -->
+    <div class="ui-overlay">
+        <div>🖱️ <strong>좌클릭</strong>: 캐릭터 이동</div>
+        <div>🎮 <strong>우클릭+드래그</strong>: 카메라 회전</div>
+        <div>🔍 <strong>마우스 휠</strong>: 줌 인/아웃</div>
+        <div>⌨️ <strong>E키</strong>: 상호작용</div>
+        <div>🪑 <strong>F키</strong>: 쇼파에 앉기</div>
+    </div>
+
+    <!-- 하단 버튼 -->
+    <div class="bottom-buttons">
+        <div class="bottom-text" id="bottomText"></div>
+        <div class="bottom-btn-group" id="bottomBtnGroup">
+            <button class="bottom-btn profile" onclick="selectMode('profile')">Profile</button>
+            <button class="bottom-btn blog" onclick="selectMode('blog')">Blog</button>
+            <button class="bottom-btn play" onclick="showPlayMenu()">Play</button>
+        </div>
+        <div class="play-submenu" id="playSubmenu">
+            <button class="bottom-btn back" onclick="hidePlayMenu()">이전</button>
+            <button class="bottom-btn exercise" onclick="playAction('exercise')">운동</button>
+            <button class="bottom-btn game" onclick="playAction('game')">게임</button>
+            <button class="bottom-btn piano" onclick="playAction('piano')">피아노</button>
+            <button class="bottom-btn hacking" onclick="playAction('hacking')">해킹</button>
+            <button class="bottom-btn rest" onclick="playAction('rest')">쉬기</button>
+        </div>
+    </div>
+
+    <div id="interaction-ui">E - 상호작용</div>
+
+    <!-- 다이얼로그 -->
+    <div class="dialog-overlay" id="dialogOverlay">
+        <div class="dialog-box">
+            <button class="dialog-close" onclick="closeDialog()">✕</button>
+            <div class="dialog-title" id="dialogTitle"></div>
+            <div class="dialog-content" id="dialogContent"></div>
+        </div>
+    </div>
+
+    <!-- 프로필 CMD 창 -->
+    <div class="cmd-overlay" id="cmdOverlay">
+        <div class="cmd-window">
+            <div class="cmd-header">
+                <div class="cmd-title">
+                    <span class="cmd-icon">⚙️</span>
+                    <span>C:\Users\JeonYujin\Profile></span>
+                </div>
+                <div class="cmd-buttons">
+                    <button class="cmd-btn close" onclick="closeCmdWindow()">✕</button>
+                </div>
+            </div>
+            <div class="cmd-body">
+                <div class="cmd-menu">
+                    <button class="cmd-menu-btn active" data-category="awards">
+                        <span class="cmd-prompt">></span> 수상이력
+                    </button>
+                    <button class="cmd-menu-btn" data-category="certificates">
+                        <span class="cmd-prompt">></span> 자격증
+                    </button>
+                    <button class="cmd-menu-btn" data-category="career">
+                        <span class="cmd-prompt">></span> 경력
+                    </button>
+                </div>
+                <div class="cmd-content" id="cmdContent">
+                    <div class="cmd-loading">
+                        <span class="cmd-cursor">█</span> Loading profile data...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="room3d.js"></script>
+</body>
+</html>

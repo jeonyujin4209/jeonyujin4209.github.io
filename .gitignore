@@ -1,0 +1,12 @@
+# Node modules
+node_modules/
+
+# Scripts with tokens
+scripts/
+
+# npm files
+package.json
+package-lock.json
+
+# Editor files
+editor.html
